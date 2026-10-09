@@ -35,6 +35,7 @@ public enum NewCard {
     /// Names a freshly formatted card may hold: macOS's, and Windows's.
     static func isEmptyCardItem(_ name: String) -> Bool {
         Category.of(path: name) == .macOSMetadata || name == "System Volume Information" || name == "$RECYCLE.BIN"
+            || FileCopy.isLeftover(name)
     }
 
     /// What would go onto the card.
@@ -78,6 +79,7 @@ public enum NewCard {
             throw p
         }
         let files = snapshot.appendingPathComponent("Files", isDirectory: true)
+        FileCopy.removeLeftovers(in: card)            // an interrupted restore's (F4)
         var out = Outcome()
         var made: [URL] = []                      // only these are removed on a failure
         let list = entries(m, includeFirmware: includeFirmware)

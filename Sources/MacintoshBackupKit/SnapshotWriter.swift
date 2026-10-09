@@ -40,6 +40,9 @@ public struct SnapshotWriter: Sendable {
     public var thinning = false
     /// How thinned snapshots are removed (the Trash; the tests, elsewhere).
     public var remover: Repository.Remover = Repository.toTrash
+    /// For the tests only (F2): skip the space check, to see a destination
+    /// filling up mid-copy handled.
+    var checksSpace = true
     /// The registered card being backed up (C3), recorded in the manifest.
     public var card: Card?
 
@@ -55,7 +58,7 @@ public struct SnapshotWriter: Sendable {
         onProgress(BackupProgress(stage: .scanning))
         let inventory = try Inventory.scan(source)
         let needed = inventory.totalBytes + 16 * 1_048_576
-        if let free = repository.availableBytes, free < needed {
+        if checksSpace, let free = repository.availableBytes, free < needed {
             throw BackupError.insufficientSpace(needed: needed, available: free)
         }
 

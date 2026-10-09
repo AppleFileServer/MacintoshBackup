@@ -13,10 +13,17 @@ enum Hashing {
         defer { try? h.close() }
         var hasher = SHA256()
         var size: Int64 = 0
-        while let data = try h.read(upToCount: chunk), !data.isEmpty {
+        // Each chunk's memory released as it goes (F1: without the pool, a
+        // 3 GB image took 2 GB of memory).
+        while true {
+            let more: Bool = try autoreleasepool {
+                guard let data = try h.read(upToCount: chunk), !data.isEmpty else { return false }
+                hasher.update(data: data)
+                size += Int64(data.count)
+                return true
+            }
+            guard more else { break }
             try Task.checkCancellation()
-            hasher.update(data: data)
-            size += Int64(data.count)
         }
         return (hex(hasher.finalize()), size)
     }

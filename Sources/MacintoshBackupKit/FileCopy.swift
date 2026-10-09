@@ -7,6 +7,19 @@ import Foundation
 enum FileCopy {
     struct SizeChanged: Error { let why: String }
 
+    /// A restore's hidden temporary file, ".mbu-restore-<UUID>" (F4).
+    static func isLeftover(_ name: String) -> Bool {
+        name.wholeMatch(of: /\.mbu-restore-[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/) != nil
+    }
+
+    /// Removes an interrupted restore's temporary files from `folder` (F4):
+    /// only files with that exact name, only in that folder.
+    static func removeLeftovers(in folder: URL) {
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [] where isLeftover(name) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+        }
+    }
+
     static let zeros = Data(count: Hashing.chunk)
 
     /// The SHA-256 of what was read. `to` must not exist.
@@ -23,14 +36,20 @@ enum FileCopy {
         var hasher = SHA256()
         var offset: UInt64 = 0
         do {
-            while let data = try input.read(upToCount: Hashing.chunk), !data.isEmpty {
-                try Task.checkCancellation()
-                hasher.update(data: data)
-                if !sparse || data != zeros.prefix(data.count) {
-                    try output.seek(toOffset: offset)
-                    try output.write(contentsOf: data)
+            while true {
+                // Each chunk's memory released as it goes (F1).
+                let more: Bool = try autoreleasepool {
+                    guard let data = try input.read(upToCount: Hashing.chunk), !data.isEmpty else { return false }
+                    hasher.update(data: data)
+                    if !sparse || data != zeros.prefix(data.count) {
+                        try output.seek(toOffset: offset)
+                        try output.write(contentsOf: data)
+                    }
+                    offset += UInt64(data.count)
+                    return true
                 }
-                offset += UInt64(data.count)
+                guard more else { break }
+                try Task.checkCancellation()
             }
             try output.truncate(atOffset: offset)
             try output.synchronize()

@@ -44,6 +44,7 @@ public struct Catalog: Codable, Sendable, Equatable {
     }
 
     public static let schema = 1
+    public static let interrupted = "Interrupted: it has no record (the app or the Mac stopped during the backup)."
     public var schemaVersion = Catalog.schema
     public var updated: Date
     public var snapshots: [Summary]
@@ -92,9 +93,13 @@ public struct Catalog: Codable, Sendable, Equatable {
                 }
                 list.append(s)
             } catch let e as BackupError {
+                // No record at all: the app or the Mac stopped mid-backup (F3).
+                let interrupted = !FileManager.default.fileExists(atPath: url.appendingPathComponent(Manifest.fileName).path)
                 list.append(Summary(snapshotID: nil, name: folder, folder: folder, status: nil, started: nil,
                                     finished: nil, files: 0, bytes: 0, storedBytes: stored, volumeName: nil,
-                                    volumeUUID: nil, cardID: nil, cardName: nil, warnings: 0, problem: e.message))
+                                    volumeUUID: nil, cardID: nil, cardName: nil, warnings: 0,
+                                    problem: interrupted && folder.hasPrefix(".incomplete-")
+                                        ? Catalog.interrupted : e.message))
             }
         }
         list.sort { ($0.started ?? .distantPast, $0.folder) < ($1.started ?? .distantPast, $1.folder) }

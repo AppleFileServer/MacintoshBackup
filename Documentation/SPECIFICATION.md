@@ -1152,3 +1152,30 @@ yet used):
   the replacement if it's only a test; Eject; then, for the full test,
   shut the Plus down, put the spare card in the BlueSCSI and start it
   (it should come up as before), and swap the real card back.
+
+### 20.9 Stage 5: reliability (F1-F6, approved by the owner; 2026-10-09)
+
+- F1: a 3 GB image (1 MB of data at each end, the rest empty) backed up,
+  verified, and restored to a folder, matching; the process's peak
+  memory under 512 MB. **Found and fixed:** it had peaked at about 2 GB:
+  each 1 MiB chunk's memory wasn't released until the whole file was
+  done; now an autorelease pool per chunk (hashing and copying alike, so
+  restoring to a card too). The owner's 1980 MB Scratch image would
+  have taken about that much.
+- F2: a 40 MB disk image filled mid-copy (the space check switched off
+  for the test): the job fails, no snapshot is named, the catalogue has
+  the one restore point, and the earlier snapshot verifies. **Found and
+  fixed:** on a disk that isn't APFS, macOS's "available for important
+  use" can read 0, so a roomy disk was refused; the larger of that and
+  the plain free space is used.
+- F3: a `.incomplete-` folder with no manifest (as if the app or the Mac
+  stopped mid-backup) is listed as "Interrupted: it has no record...",
+  never as a restore point, and clears on request.
+- F4: an interrupted restore's `.mbu-restore-<UUID>` is removed by the
+  next restore to that folder (only names of exactly that form; another
+  file starting `.mbu-restore-` is left), and on a new card it doesn't
+  make the card "not empty".
+- F5: the card's folder deleted mid-backup: the job fails, no restore
+  point, the earlier snapshot intact.
+- F6: after each of these, the earlier snapshot verifies, and its
+  manifest is byte for byte the same.

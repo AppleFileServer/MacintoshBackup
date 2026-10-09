@@ -68,6 +68,7 @@ public struct Restorer: Sendable {
                         onFile: @Sendable (String) -> Void = { _ in }) throws -> Outcome {
         var out = Outcome(destination: destination)
         let files = snapshot.appendingPathComponent("Files", isDirectory: true)
+        var cleared = Set<String>()
         for e in entries(paths, options: options) {
             try Task.checkCancellation()
             let target = destination.appendingPathComponent(e.path)
@@ -87,8 +88,9 @@ public struct Restorer: Sendable {
                         case .replace: break
                         }
                     }
-                    let temp = target.deletingLastPathComponent()
-                        .appendingPathComponent(".mbu-restore-\(UUID().uuidString)")
+                    let folder = target.deletingLastPathComponent()
+                    if cleared.insert(folder.path).inserted { FileCopy.removeLeftovers(in: folder) }
+                    let temp = folder.appendingPathComponent(".mbu-restore-\(UUID().uuidString)")
                     do {
                         let hash = try FileCopy.copy(files.appendingPathComponent(e.path), to: temp, size: e.size,
                                                      modified: e.modified, created: e.created)

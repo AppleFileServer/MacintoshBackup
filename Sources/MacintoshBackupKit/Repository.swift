@@ -25,9 +25,15 @@ public struct Repository: Sendable {
         }
     }
 
+    /// Free space where the snapshots go: macOS's figure for important use
+    /// (which counts purgeable space on APFS), or the plain free space,
+    /// whichever is larger (on other disks the first can be 0).
     public var availableBytes: Int64? {
-        (try? snapshots.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage
+        let v = try? snapshots.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey,
+                                                         .volumeAvailableCapacityKey])
+        let important = v?.volumeAvailableCapacityForImportantUsage, plain = v?.volumeAvailableCapacity.map(Int64.init)
+        if important == nil && plain == nil { return nil }
+        return max(important ?? 0, plain ?? 0)
     }
 
     /// "2026-10-09_17-30-00_7f3a": the local start time, and the first four
