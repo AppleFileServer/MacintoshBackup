@@ -1179,3 +1179,17 @@ yet used):
   point, the earlier snapshot intact.
 - F6: after each of these, the earlier snapshot verifies, and its
   manifest is byte for byte the same.
+
+### 20.10 Stage 6: packaging (2026-10-09)
+
+- `--self-test` in the app: a small card in a temporary folder (a disk
+  image put away cleanly, `bluescsi.ini`, a log) recognised, backed up,
+  verified, verified again from the snapshot alone, restored to a folder
+  and compared, catalogued; everything removed. It passes in the
+  packaged app, and the owner's backups are untouched.
+- `tools/make-release.sh`, as the other utilities': committed source
+  only; the tests; the app; the self-test on a copy outside the
+  repository; the zip, release notes, SHA256SUMS, a git bundle of the
+  source, the checks. No third-party code, so no licences to carry.
+- The release notes, BUILDING.md and TESTING.md. Version 1.0; the tag
+  after the owner's acceptance.

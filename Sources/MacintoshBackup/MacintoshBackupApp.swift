@@ -7,6 +7,18 @@ struct MacintoshBackupApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var model = AppModel()
 
+    /// `--self-test` (Stage 6): no window; a test card in a temporary
+    /// folder only; prints the report and quits, 0 if it passed.
+    init() {
+        guard CommandLine.arguments.contains("--self-test") else { return }
+        Task.detached {
+            let (passed, report) = await SelfTest.run()
+            for line in report { print(line) }
+            exit(passed ? 0 : 1)
+        }
+        DispatchSemaphore(value: 0).wait()          // until the test exits
+    }
+
     var body: some Scene {
         Window("Macintosh Backup Utility", id: "main") {
             MainWindowView(model: model)

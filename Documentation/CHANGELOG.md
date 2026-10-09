@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0 (candidate)
+
+- Stage 6, packaging: `--self-test`; `tools/make-release.sh`; the release
+  notes, BUILDING.md and TESTING.md. Version 1.0. 63 tests.
+
 ## 0.1.0 (in development)
 
 - Stage 5, reliability (F1-F6): a 3 GB image backed up, verified and
