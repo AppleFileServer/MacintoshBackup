@@ -959,3 +959,33 @@ Built and tested on generated cards only; no real card has been read.
 - Found and fixed: the manifest's dates must keep milliseconds (written
   from a whole number, as a formatter can be a millisecond out), and the
   source's re-check compares against the inventory's own, finer dates.
+
+### 20.4 Stage 2: the catalogue and recovery (2026-10-09)
+
+Built and tested on generated cards only.
+
+- Each backup is catalogued; the last backup is the latest restore
+  point; a failed job is listed as incomplete, never as a restore point.
+- The catalogue deleted, then made unreadable, then put back out of date
+  (missing the newest snapshot): each time rebuilt from the manifests,
+  and every file in Snapshots byte-for-byte as before. A snapshot whose
+  manifest is damaged is listed with its problem, not as a restore
+  point; a folder of the owner's own in Snapshots is ignored.
+- A whole snapshot restored into "Restored <name>" matches the card file
+  for file; a second goes into "... 2"; no temporary files are left.
+  One file and one folder restore with their paths; files not asked for
+  aren't touched.
+- A file already there: Skip leaves it; Keep Both adds "CD3 2.iso";
+  Replace puts the backup's in its place; each time the owner is asked,
+  once. A backup file damaged after the backup is caught while restoring,
+  and nothing is put in place. An incomplete snapshot can't be restored
+  from. macOS's own files and firmware packages can be left out.
+- Deleting: refused unless confirmed, unless the ID matches, and for any
+  folder that isn't one of the repository's snapshots ("..", "Catalog",
+  a folder of the owner's, a path inside a snapshot); a confirmed one
+  goes (in the tests, to a folder of their own, not the Trash) and the
+  other snapshot still verifies; abandoned work can be cleared.
+- `mbu list`, `show`, `restore` (whole, a folder, with Keep Both) and a
+  rebuilt catalogue, tried by hand in the scratchpad.
+- An implementation choice: deleting moves a snapshot to the Trash
+  rather than erasing it, so a mistake can be undone.

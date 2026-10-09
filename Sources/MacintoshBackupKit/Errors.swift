@@ -6,6 +6,7 @@ public enum BackupError: Error, Equatable, Sendable {
     case insufficientSpace(needed: Int64, available: Int64)
     case snapshotExists(String)
     case manifestInvalid(String)
+    case notARestorePoint(String)
 
     public var message: String {
         switch self {
@@ -15,6 +16,7 @@ public enum BackupError: Error, Equatable, Sendable {
             "There isn't room for the backup: it needs about \(n / 1_000_000) MB, and \(a / 1_000_000) MB is free."
         case .snapshotExists(let n): "A snapshot called \(n) is already there, so this one wasn't saved."
         case .manifestInvalid(let why): "The snapshot's manifest isn't valid: \(why)"
+        case .notARestorePoint(let n): "\(n) isn't a complete, verified snapshot, so it can't be restored from."
         }
     }
 }

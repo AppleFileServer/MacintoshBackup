@@ -16,7 +16,12 @@ by stage, is marked in the CHANGELOG.
     re-checked, the manifest, the commit;
   - `Verifier`: a snapshot against its own manifest, read-only;
   - `Manifest`: the versioned JSON (below);
-  - later stages: the catalogue, restore, recognition, identity.
+  - `FileCopy`: one file copied, hashed, sparse, read back (backing up and
+    restoring alike);
+  - `Catalog`: the index, rebuilt from the manifests (Stage 2);
+  - `Restorer`: to a folder, checked against the manifest (Stage 2);
+  - `Housekeeping`: deleting a snapshot, only confirmed, to the Trash (Stage 2);
+  - later stages: recognition, identity, restoring to a new card.
 - **mbu**, the developer's command-line tool (Stages 1-2).
 - **The app** (Stage 3 on), SwiftUI, a thin layer over the library.
 
@@ -85,3 +90,33 @@ What's preserved: every byte, the folder structure, names, and the
 modification and creation dates (to FAT's coarser precision). What
 isn't: FAT attributes (hidden, system, archive), permissions (FAT has
 none), anything else of the card's filesystem.
+
+## The catalogue (Stage 2)
+
+`Catalog/catalog.json` lists every folder in Snapshots that is a
+snapshot (a snapshot's name, or `.incomplete-<UUID>`; any other folder
+is ignored): its ID, status, dates, files, bytes, the space it takes,
+the card's name and UUID, its warnings, and any problem (a manifest
+that can't be read, or a folder and manifest that disagree). Only a
+named, verified snapshot is a restore point. It's rewritten after every
+job, and rebuilt from the manifests (reading them only) whenever it's
+missing, can't be read, or doesn't list exactly the folders there.
+
+## Restoring (Stage 2)
+
+Only from a restore point. Each file is copied (as above) to a hidden
+`.mbu-restore-<UUID>` beside its place, its SHA-256 compared with the
+manifest's, and only then moved into place; a mismatch (the backup
+damaged) leaves nothing behind. A file already there is never replaced
+without an answer: Skip, Keep Both ("Name 2.ext") or Replace. A whole
+snapshot goes into a new folder, "Restored <snapshot name>" (numbered if
+taken). macOS's own files and firmware packages can be left out (for
+restoring to a card, B13).
+
+## Deleting (Stage 2)
+
+Only when confirmed, only a folder that is one of this repository's
+snapshot folders (by name, directly inside Snapshots), and only if its
+manifest names the snapshot asked for; it goes to the Trash, so a
+mistake can be undone. The window warns when it's a card's last restore
+point. Nothing is ever deleted by the app on its own.

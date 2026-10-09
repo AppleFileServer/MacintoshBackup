@@ -60,6 +60,7 @@ public struct SnapshotWriter: Sendable {
                              entries: entries, warnings: warnings)
             m.finished = Manifest.milliseconds(Date())
             try write(m, to: work)
+            defer { _ = try? Catalog.rebuild(repository) }
             guard s == .verified else { return BackupResult(manifest: m, folder: work) }
             onProgress(BackupProgress(stage: .finishing))
             let final = repository.snapshots.appendingPathComponent(name, isDirectory: true)
@@ -96,7 +97,7 @@ public struct SnapshotWriter: Sendable {
                         entries[i].result = .verified
                     } catch let error as CancellationError {
                         throw error
-                    } catch let change as SourceChanged {
+                    } catch let change as FileCopy.SizeChanged {
                         entries[i].result = .changed
                         entries[i].note = change.why
                         status = .inconsistent
@@ -132,53 +133,10 @@ public struct SnapshotWriter: Sendable {
 
     // MARK: Copying one file
 
-    struct SourceChanged: Error { let why: String }
+    typealias SourceChanged = FileCopy.SizeChanged
 
-    static let zeros = Data(count: Hashing.chunk)
-
-    /// Copies a file, hashing it as it's read; runs of zeros left as holes
-    /// (B14); flushed, dated, then read back and checked. Its hash.
     func copy(_ from: URL, to: URL, expected: Entry) throws -> String {
-        let input = try FileHandle(forReadingFrom: from)
-        defer { try? input.close() }
-        guard FileManager.default.createFile(atPath: to.path, contents: nil) else {
-            throw CocoaError(.fileWriteUnknown, userInfo: [NSFilePathErrorKey: to.path])
-        }
-        let output = try FileHandle(forWritingTo: to)
-        var hasher = SHA256()
-        var offset: UInt64 = 0
-        do {
-            while let data = try input.read(upToCount: Hashing.chunk), !data.isEmpty {
-                try Task.checkCancellation()
-                hasher.update(data: data)
-                if data != SnapshotWriter.zeros.prefix(data.count) {
-                    try output.seek(toOffset: offset)
-                    try output.write(contentsOf: data)
-                }
-                offset += UInt64(data.count)
-            }
-            try output.truncate(atOffset: offset)
-            try output.synchronize()
-            try output.close()
-        } catch {
-            try? output.close()
-            throw error
-        }
-        guard Int64(offset) == expected.size else {
-            throw SourceChanged(why: "It was \(expected.size) bytes when scanned, but \(offset) when copied.")
-        }
-        var dates: [FileAttributeKey: Any] = [:]
-        if let m = expected.modified { dates[.modificationDate] = m }
-        if let c = expected.created { dates[.creationDate] = c }
-        if !dates.isEmpty { try? FileManager.default.setAttributes(dates, ofItemAtPath: to.path) }
-
-        let hash = Hashing.hex(hasher.finalize())
-        let back = try Hashing.sha256(of: to)
-        guard back.size == expected.size, back.hash == hash else {
-            throw CocoaError(.fileReadCorruptFile, userInfo: [NSLocalizedDescriptionKey:
-                "The copy doesn't match what was read from the card."])
-        }
-        return hash
+        try FileCopy.copy(from, to: to, size: expected.size, modified: expected.modified, created: expected.created)
     }
 
     /// Why a source file isn't the one inventoried, if it isn't.

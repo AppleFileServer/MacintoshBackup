@@ -2,6 +2,16 @@
 
 ## 0.1.0 (in development)
 
+- Stage 2, the catalogue and recovery: the catalogue (updated after
+  each job; rebuilt from the manifests when lost, damaged or out of
+  date, without touching a snapshot; incomplete jobs listed apart from
+  restore points); restoring a file, a folder or a whole snapshot (into
+  "Restored <name>"), each file checked against the manifest before
+  it's put in place, conflicts answered Skip, Keep Both or Replace;
+  deleting a snapshot or abandoned work, only confirmed, only the
+  repository's own, to the Trash. `mbu list`, `rebuild`, `show`,
+  `restore`. 33 tests.
+
 - Stage 1, the backup engine: a source folder inventoried (everything,
   hidden files too, each labelled: disk image, configuration, log,
   firmware, macOS metadata, other); each file copied in 1 MiB chunks,

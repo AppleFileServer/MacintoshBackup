@@ -39,6 +39,11 @@ public struct Repository: Sendable {
         return f.string(from: started) + "_" + id.uuidString.prefix(4).lowercased()
     }
 
+    /// A name `snapshotName` makes: the only folders taken for snapshots.
+    public static func isSnapshotName(_ s: String) -> Bool {
+        s.wholeMatch(of: /\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d_[0-9a-f]{4}/) != nil
+    }
+
     func workspace(for id: UUID) -> URL {
         snapshots.appendingPathComponent(".incomplete-\(id.uuidString)", isDirectory: true)
     }
