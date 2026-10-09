@@ -10,7 +10,9 @@ enum FileCopy {
     static let zeros = Data(count: Hashing.chunk)
 
     /// The SHA-256 of what was read. `to` must not exist.
-    static func copy(_ from: URL, to: URL, size: Int64, modified: Date?, created: Date?) throws -> String {
+    /// `sparse` false writes every byte (for a card: FAT has no holes, and
+    /// one plain write keeps an image in one piece).
+    static func copy(_ from: URL, to: URL, size: Int64, modified: Date?, created: Date?, sparse: Bool = true) throws -> String {
         let input = try FileHandle(forReadingFrom: from)
         defer { try? input.close() }
         guard !FileManager.default.fileExists(atPath: to.path),
@@ -24,7 +26,7 @@ enum FileCopy {
             while let data = try input.read(upToCount: Hashing.chunk), !data.isEmpty {
                 try Task.checkCancellation()
                 hasher.update(data: data)
-                if data != zeros.prefix(data.count) {
+                if !sparse || data != zeros.prefix(data.count) {
                     try output.seek(toOffset: offset)
                     try output.write(contentsOf: data)
                 }

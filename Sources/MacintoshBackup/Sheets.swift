@@ -230,3 +230,120 @@ struct RegisterSheet: View {
         .frame(width: 440)
     }
 }
+
+/// Restore to a New Card (B13): how to format it, which inserted card,
+/// a clear confirmation, then the restore, every file checked; then the
+/// replacement, and Eject.
+struct NewCardSheet: View {
+    @Bindable var model: AppModel
+    let summary: Catalog.Summary
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var chosen: URL?
+    @State private var includeFirmware = false
+    @State private var confirming = false
+    @State private var running = false
+    @State private var current: String?
+    @State private var outcome: NewCard.Outcome?
+    @State private var problem: String?
+    @State private var replaced: Card?
+
+    var manifest: Manifest? { try? Manifest.read(model.folderURL(summary).appendingPathComponent(Manifest.fileName)) }
+    var disk: VolumeInfo? { model.disks.first { $0.url == chosen } }
+    /// The snapshot's card: its own record, or the registered card with its
+    /// volume's UUID (a snapshot made before registering).
+    var cardID: UUID? {
+        summary.cardID ?? model.register.cards.first { $0.volumeUUID != nil && $0.volumeUUID == summary.volumeUUID }?.id
+    }
+
+    func verdict(_ v: VolumeInfo) -> String? {
+        guard let m = manifest else { return "The snapshot can't be read." }
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: v.url.path)) ?? []
+        let free = (try? v.url.resourceValues(forKeys: [.volumeAvailableCapacityKey]))?.volumeAvailableCapacity.map(Int64.init)
+        return NewCard.check(m, cardItems: items, filesystem: v.filesystem, available: free, includeFirmware: includeFirmware)?.message
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Restore \(summary.name) to a New Card").font(.title3.bold())
+            Text("Everything the snapshot holds goes onto a new, empty card, ready for the BlueSCSI: every disk image and its configuration, each checked as it's written. Nothing on another card is touched.")
+            GroupBox("First, format the new card") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("In Disk Utility, select the card, click Erase, and choose Format: ExFAT, Scheme: Master Boot Record. (BlueSCSI recommends the SD Card Formatter's full overwrite format for a new card.) The app never formats a card itself.")
+                        .font(.callout)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text("Inserted cards").font(.headline)
+            if model.disks.isEmpty {
+                Text("Insert the new card.").foregroundStyle(.secondary)
+            }
+            ForEach(model.disks, id: \.url) { v in
+                let why = verdict(v)
+                HStack(alignment: .firstTextBaseline) {
+                    Image(systemName: chosen == v.url ? "largecircle.fill.circle" : "circle")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(v.name ?? v.url.lastPathComponent)  \(v.filesystem ?? "")  \(bytes(v.capacity))")
+                        Text(why ?? "Empty, and ready.").font(.caption).foregroundStyle(why == nil ? .green : .secondary)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { if why == nil && !running { chosen = v.url } }
+                .opacity(why == nil ? 1 : 0.6)
+            }
+            Toggle("Include BlueSCSI firmware update packages", isOn: $includeFirmware)
+                .help("Left out normally: a firmware package on the card makes the BlueSCSI reflash itself when it starts.")
+            if running { HStack { ProgressView().controlSize(.small); Text(current ?? "").font(.caption).lineLimit(1) } }
+            if let o = outcome {
+                Label(o.succeeded ? "Restored \(o.written.count) files; all \(o.checked) checked on the card." : "Some files don't match: \(o.failed.keys.sorted().joined(separator: ", "))",
+                      systemImage: o.succeeded ? "checkmark.circle.fill" : "xmark.octagon.fill")
+                    .foregroundStyle(o.succeeded ? .green : .red)
+                if o.succeeded, let v = disk {
+                    if let r = replaced { Text("Recorded as \(r.name)'s replacement: its backups carry on under that name.").font(.callout) }
+                    else if let id = cardID {
+                        Button("Use as \(model.cardName(of: summary))'s Replacement") { replaced = model.makeReplacement(for: id, with: v) }
+                    }
+                    Text("Eject the card, put it in the BlueSCSI, and switch the Plus on.").font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            if let p = problem { Text(p).foregroundStyle(.red) }
+            HStack {
+                if outcome?.succeeded == true, let v = disk { Button("Eject") { model.eject(v.url) } }
+                Spacer()
+                Button(outcome == nil ? "Cancel" : "Done") { dismiss() }.keyboardShortcut(.cancelAction).disabled(running)
+                if outcome == nil {
+                    Button("Restore to Card…") { confirming = true }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(running || disk == nil || (disk.map(verdict) ?? "x") != nil)
+                }
+            }
+        }
+        .padding(20)
+        .frame(width: 600)
+        .alert("Restore onto \(disk?.name ?? "this card")?", isPresented: $confirming) {
+            Button("Restore to Card") { restore() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("\(summary.name), \(bytes(summary.bytes)), is written to \(disk?.name ?? "the card") (\(disk?.filesystem ?? ""), \(bytes(disk?.capacity))). The Macintosh Plus will use these disks when the card goes in its BlueSCSI. This isn't a copy of the whole old card, only of its files.")
+        }
+    }
+
+    func restore() {
+        guard let card = chosen else { return }
+        running = true
+        problem = nil
+        let snap = model.folderURL(summary), firmware = includeFirmware
+        Task {
+            let result = await Task.detached { () -> Result<NewCard.Outcome, Error> in
+                Result { try NewCard.restore(snap, onto: card, includeFirmware: firmware) { f in
+                    Task { @MainActor in current = f }
+                } }
+            }.value
+            running = false
+            switch result {
+            case .success(let o): outcome = o
+            case .failure(let e as NewCard.Problem): problem = e.message
+            case .failure(let e): problem = (e as? BackupError)?.message ?? e.localizedDescription
+            }
+        }
+    }
+}

@@ -1119,3 +1119,36 @@ Applications 40 MB, Utilities 20 MB, Scratch 1980 MB, Transfer), with
   last-backup warning would have counted it as another card's; a
   snapshot without a card ID now counts as the registered card's when
   its volume's UUID matches, and the history shows the card's name.
+
+### 20.8 Stage 4b: Restore to a New Card (B13; 2026-10-09)
+
+The detail settled: "the replacement" means the new card takes over the
+old card's entry in the register (its name, its ID, so its backups and
+thinning carry on as one history), the old volume UUID kept as a
+previous identity, so the old card turning up again is asked about.
+Writing to a card is plain (every byte, in order), not sparse: FAT has
+no holes, and one write keeps an image in one piece.
+
+Found, on exFAT and FAT32 disk images only (the owner's spare card not
+yet used):
+- The checks: an empty card (macOS's and Windows's own items only)
+  passes; anything else refused, naming it; not FAT (APFS) refused; a
+  5 GB image refused on FAT32 and allowed on exFAT; too little room
+  refused.
+- Onto an empty exFAT, and an empty FAT32, image: every file the same as
+  the card it was backed up from; no temporary names, no firmware
+  package, no `._` files left; the empty folder made.
+- A card with a photo on it: refused, and nothing written.
+- A backup file damaged after the backup: the restore stops, and the
+  card is as it was.
+- The register: the new card known by its UUID under the old name and
+  ID; the old UUID kept; the old card turning up asked about.
+- The owner's spare card: to be tried later (2026-10-09). Until then,
+  Restore to a New Card is verified on disk images only. The steps, the
+  owner's to take (the real card stays in the Plus): format a spare card
+  of at least 2.5 GB in Disk Utility (Erase; ExFAT; Master Boot Record);
+  insert it; in the history, a Mac Plus BlueSCSI snapshot's Restore to a
+  New Card…, the spare card, Restore to Card…, confirm; don't use it as
+  the replacement if it's only a test; Eject; then, for the full test,
+  shut the Plus down, put the spare card in the BlueSCSI and start it
+  (it should come up as before), and swap the real card back.

@@ -56,6 +56,9 @@ final class AppModel {
     var registering: VolumeInfo?
     var asking: (VolumeInfo, Card)?
     var cardRemoved = false
+    /// Every external disk inserted, BlueSCSI or not: for Restore to a New
+    /// Card (B13), whose card is empty.
+    var disks: [VolumeInfo] = []
     private var watcher = CardWatcher()
     private var monitor: VolumeMonitor?
     private var notified = false
@@ -74,6 +77,10 @@ final class AppModel {
                 let v = VolumeInfo.of(url)
                 return (v, v.isCandidate ? Evidence.of(url) : .none)
             }.value
+            if found.0.isCandidate {
+                disks.removeAll { $0.url == found.0.url }
+                disks.append(found.0)
+            }
             guard case .offer(let v, let e, let match) = watcher.mounted(found.0, evidence: found.1, register: register)
             else { return }
             offer(v, evidence: e, match: match)
@@ -82,6 +89,7 @@ final class AppModel {
 
     func unmounted(_ url: URL) {
         _ = watcher.unmounted(url)
+        disks.removeAll { $0.url.standardizedFileURL == url.standardizedFileURL }
         guard source?.url.standardizedFileURL == url.standardizedFileURL else { return }
         if state == .backingUp {
             cardRemoved = true
@@ -154,6 +162,19 @@ final class AppModel {
             content.body = "Open the Macintosh Backup Utility to back it up."
             centre.add(UNNotificationRequest(identifier: "card-\(UUID().uuidString)", content: content, trigger: nil))
         }
+    }
+
+    /// The new card takes over the snapshot's card's entry (B13).
+    func makeReplacement(for cardID: UUID?, with v: VolumeInfo) -> Card? {
+        guard let id = cardID, let old = register.cards.first(where: { $0.id == id }) else { return nil }
+        let c = register.replace(old, with: v)
+        try? register.save(repository)
+        return c
+    }
+
+    func eject(_ url: URL) {
+        do { try NSWorkspace.shared.unmountAndEjectDevice(at: url) }
+        catch { show("The card couldn't be ejected", error.localizedDescription + " Eject it in the Finder.") }
     }
 
     /// Ejects the card properly (C5); not while a job is running.

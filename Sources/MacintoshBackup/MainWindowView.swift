@@ -6,6 +6,7 @@ import MacintoshBackupKit
 struct MainWindowView: View {
     @Bindable var model: AppModel
     @State private var restoring: Catalog.Summary?
+    @State private var toNewCard: Catalog.Summary?
     @State private var deleting: Catalog.Summary?
     @State private var clearing = false
 
@@ -16,7 +17,7 @@ struct MainWindowView: View {
             HSplitView {
                 SourceView(model: model)
                     .frame(minWidth: 300, idealWidth: 340, maxWidth: 460)
-                HistoryView(model: model, restoring: $restoring, deleting: $deleting, clearing: $clearing)
+                HistoryView(model: model, restoring: $restoring, toNewCard: $toNewCard, deleting: $deleting, clearing: $clearing)
                     .frame(minWidth: 520)
             }
         }
@@ -26,6 +27,7 @@ struct MainWindowView: View {
             BackupSheet(model: model)
         }
         .sheet(item: $restoring) { s in RestoreSheet(model: model, summary: s) }
+        .sheet(item: $toNewCard) { s in NewCardSheet(model: model, summary: s) }
         .sheet(isPresented: Binding(get: { model.registering != nil && model.state != .confirming },
                                     set: { if !$0 { model.notNow() } })) {
             RegisterSheet(model: model)
@@ -251,6 +253,7 @@ struct SourceView: View {
 struct HistoryView: View {
     @Bindable var model: AppModel
     @Binding var restoring: Catalog.Summary?
+    @Binding var toNewCard: Catalog.Summary?
     @Binding var deleting: Catalog.Summary?
     @Binding var clearing: Bool
 
@@ -278,6 +281,7 @@ struct HistoryView: View {
                 .contextMenu(forSelectionType: String.self) { items in
                     if let folder = items.first, let s = model.summary(folder) {
                         Button("Restore…") { restoring = s }
+                        Button("Restore to a New Card…") { toNewCard = s }
                         Button("Verify Backup") { model.select(folder); model.verifySelected() }
                         Button("Show in Finder") { model.reveal(s) }
                         Button(s.snapshotID.map { model.pins.contains($0) } == true ? "Don't Keep" : "Keep (Never Thin)") { model.togglePin(s) }

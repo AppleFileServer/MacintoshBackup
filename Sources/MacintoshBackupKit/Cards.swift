@@ -81,6 +81,33 @@ public struct Card: Codable, Sendable, Equatable, Identifiable {
     public var lastSeen: Date
     /// The card this one took over from (B13's replacement), if any.
     public var replaces: UUID?
+    /// The volume UUIDs it had before (a replaced or reformatted card).
+    public var previousVolumeUUIDs: [String] = []
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, volumeUUID, volumeName, capacity, filesystem, deviceModel, firstSeen, lastSeen, replaces,
+             previousVolumeUUIDs
+    }
+    public init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        volumeUUID = try c.decodeIfPresent(String.self, forKey: .volumeUUID)
+        volumeName = try c.decodeIfPresent(String.self, forKey: .volumeName)
+        capacity = try c.decodeIfPresent(Int64.self, forKey: .capacity)
+        filesystem = try c.decodeIfPresent(String.self, forKey: .filesystem)
+        deviceModel = try c.decodeIfPresent(String.self, forKey: .deviceModel)
+        firstSeen = try c.decode(Date.self, forKey: .firstSeen)
+        lastSeen = try c.decode(Date.self, forKey: .lastSeen)
+        replaces = try c.decodeIfPresent(UUID.self, forKey: .replaces)
+        previousVolumeUUIDs = try c.decodeIfPresent([String].self, forKey: .previousVolumeUUIDs) ?? []
+    }
+    init(id: UUID, name: String, volumeUUID: String?, volumeName: String?, capacity: Int64?, filesystem: String?,
+         deviceModel: String?, firstSeen: Date, lastSeen: Date, replaces: UUID?) {
+        self.id = id; self.name = name; self.volumeUUID = volumeUUID; self.volumeName = volumeName
+        self.capacity = capacity; self.filesystem = filesystem; self.deviceModel = deviceModel
+        self.firstSeen = firstSeen; self.lastSeen = lastSeen; self.replaces = replaces
+    }
 }
 
 /// The card register, Catalog/cards.json (C3). Many cards; the window is
@@ -110,6 +137,7 @@ public struct CardRegister: Codable, Sendable, Equatable {
 
     public func match(_ v: VolumeInfo) -> Match {
         if let uuid = v.uuid, let c = cards.first(where: { $0.volumeUUID == uuid }) { return .known(c) }
+        if let uuid = v.uuid, let c = cards.first(where: { $0.previousVolumeUUIDs.contains(uuid) }) { return .probably(c) }
         if let c = cards.first(where: { c in
             c.volumeName != nil && c.volumeName == v.name && c.filesystem == v.filesystem
                 && c.capacity != nil && v.capacity != nil && abs(c.capacity! - v.capacity!) <= c.capacity! / 100
