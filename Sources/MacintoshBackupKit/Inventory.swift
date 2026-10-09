@@ -2,7 +2,8 @@ import Foundation
 
 /// One thing found on the source (B6): its place relative to the root,
 /// what it is, and, once copied, what happened to it.
-public struct Entry: Codable, Sendable, Equatable {
+public struct Entry: Codable, Sendable, Equatable, Identifiable {
+    public var id: String { path }
     public enum Kind: String, Codable, Sendable { case file, folder, link, other }
     public enum Result: String, Codable, Sendable { case verified, skipped, failed, changed }
 
@@ -15,6 +16,9 @@ public struct Entry: Codable, Sendable, Equatable {
     public var category: Category
     public var result: Result?
     public var note: String?
+    /// A disk image's HFS volume: put away properly? (W13; nil if not
+    /// found, or not a disk image.)
+    public var cleanShutdown: Bool?
 }
 
 /// The source tree, read without writing to it (B7, B8): everything the
@@ -25,6 +29,14 @@ public struct Inventory: Sendable {
     var fileIDs: [String: UInt64]
 
     public var files: [Entry] { entries.filter { $0.kind == .file } }
+    /// Disk images whose volume wasn't put away properly (W13).
+    public var notCleanlyShutDown: [Entry] { entries.filter { $0.cleanShutdown == false } }
+
+    /// W13's warning, for the window and the manifest.
+    public static func uncleanWarning(_ path: String) -> String {
+        "\(path) wasn't shut down cleanly: the Plus may have lost power while using it. "
+            + "This backup keeps it as it is; an earlier snapshot may be the better one to restore."
+    }
     public var totalBytes: Int64 { files.reduce(0) { $0 + $1.size } }
 
     static let keys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey,
@@ -52,6 +64,12 @@ public struct Inventory: Sendable {
                           category: Category.of(path: path, isFolder: kind == .folder), result: nil, note: nil)
             if kind == .file, !FileManager.default.isReadableFile(atPath: url.path) {
                 e.note = "It can't be read."
+            } else if kind == .file, e.category == .diskImage {
+                switch CleanShutdown.check(url) {
+                case .clean: e.cleanShutdown = true
+                case .notClean: e.cleanShutdown = false
+                case .unknown: break
+                }
             }
             if let id = v?.fileIdentifier { ids[path] = id }
             entries.append(e)

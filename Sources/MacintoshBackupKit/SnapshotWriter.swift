@@ -10,12 +10,20 @@ public struct BackupProgress: Sendable {
     public var bytesDone: Int64 = 0
     public var bytesTotal: Int64 = 0
     public var current: String?
+
+    public init(stage: Stage, filesDone: Int = 0, filesTotal: Int = 0, bytesDone: Int64 = 0,
+                bytesTotal: Int64 = 0, current: String? = nil) {
+        self.stage = stage; self.filesDone = filesDone; self.filesTotal = filesTotal
+        self.bytesDone = bytesDone; self.bytesTotal = bytesTotal; self.current = current
+    }
 }
 
 public struct BackupResult: Sendable {
     public let manifest: Manifest
     /// The snapshot's folder: its name if verified, else `.incomplete-...`.
     public let folder: URL
+    /// Older snapshots thinned after it (W14), by name.
+    public var removed: [String] = []
     public var verified: Bool { manifest.status == .verified }
 }
 
@@ -28,6 +36,10 @@ public struct SnapshotWriter: Sendable {
     /// For the tests only: called after each file is copied, to change the
     /// source mid-backup.
     var afterCopy: (@Sendable (Entry) -> Void)?
+    /// W14: thin the card's older snapshots after a verified backup.
+    public var thinning = false
+    /// How thinned snapshots are removed (the Trash; the tests, elsewhere).
+    public var remover: Repository.Remover = Repository.toTrash
 
     public init(repository: Repository) { self.repository = repository }
 
@@ -50,7 +62,7 @@ public struct SnapshotWriter: Sendable {
         try FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
 
         var entries = inventory.entries
-        var warnings: [String] = []
+        var warnings: [String] = inventory.notCleanlyShutDown.map { Inventory.uncleanWarning($0.path) }
         var progress = BackupProgress(stage: .copying, filesTotal: inventory.files.count,
                                       bytesTotal: inventory.totalBytes)
         var status = Manifest.Status.verified
@@ -71,7 +83,13 @@ public struct SnapshotWriter: Sendable {
                 return BackupResult(manifest: m, folder: work)
             }
             try FileManager.default.moveItem(at: work, to: final)
-            return BackupResult(manifest: m, folder: final)
+            _ = try? Catalog.rebuild(repository)
+            var removed: [String] = []
+            if thinning {
+                removed = (try? repository.thin(card: m.source.volumeUUID, volumeName: m.source.volumeName,
+                                                remover: remover)) ?? []
+            }
+            return BackupResult(manifest: m, folder: final, removed: removed)
         }
 
         do {

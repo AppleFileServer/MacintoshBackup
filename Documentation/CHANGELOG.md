@@ -2,6 +2,18 @@
 
 ## 0.1.0 (in development)
 
+- Stage 3, the window (W1-W14): the status (with the shut-down reminder
+  while waiting for a card), the card and its contents, the history and
+  the selected snapshot's manifest; Back Up Now (with its sheet: the
+  room needed and free, the warnings), progress and Cancel, the result
+  in plain words; Browse Backups, Verify Backup, Restore… (the whole
+  snapshot or chosen files, conflicts asked), Open Backup Folder,
+  Settings (the backup folder; thinning); Keep (pin) and Delete… (to
+  the Trash, warning of a card's last backup); incomplete jobs, Clear….
+  W13: disk images not shut down cleanly found and warned of. W14:
+  older snapshots thinned after each verified backup (on by default).
+  The icon. `tools/build-app.sh`. 45 tests.
+
 - Stage 2, the catalogue and recovery: the catalogue (updated after
   each job; rebuilt from the manifests when lost, damaged or out of
   date, without touching a snapshot; incomplete jobs listed apart from

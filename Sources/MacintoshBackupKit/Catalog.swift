@@ -5,7 +5,8 @@ import Foundation
 /// it is rebuilt from the snapshots' own manifests whenever it's missing
 /// or damaged, and rebuilding reads the snapshots only.
 public struct Catalog: Codable, Sendable, Equatable {
-    public struct Summary: Codable, Sendable, Equatable {
+    public struct Summary: Codable, Sendable, Equatable, Identifiable {
+        public var id: String { folder }
         public var snapshotID: UUID?
         public var name: String
         /// The folder's name in Snapshots: the snapshot's name, or
@@ -23,6 +24,8 @@ public struct Catalog: Codable, Sendable, Equatable {
         public var volumeUUID: String?
         public var warnings: Int
         public var problem: String?
+        /// A disk image in it wasn't shut down cleanly (W13).
+        public var unclean = false
 
         /// A complete restore point: named, and verified when made.
         public var isRestorePoint: Bool { status == .verified && !folder.hasPrefix(".incomplete-") }
@@ -32,6 +35,11 @@ public struct Catalog: Codable, Sendable, Equatable {
     public var schemaVersion = Catalog.schema
     public var updated: Date
     public var snapshots: [Summary]
+
+    public init(updated: Date, snapshots: [Summary]) {
+        self.updated = updated
+        self.snapshots = snapshots
+    }
 
     public var restorePoints: [Summary] { snapshots.filter(\.isRestorePoint) }
     public var incomplete: [Summary] { snapshots.filter { !$0.isRestorePoint } }
@@ -63,7 +71,8 @@ public struct Catalog: Codable, Sendable, Equatable {
                 var s = Summary(snapshotID: m.snapshotID, name: m.name, folder: folder, status: m.status,
                                 started: m.started, finished: m.finished, files: m.totals.files,
                                 bytes: m.totals.bytes, storedBytes: stored, volumeName: m.source.volumeName,
-                                volumeUUID: m.source.volumeUUID, warnings: m.warnings.count, problem: nil)
+                                volumeUUID: m.source.volumeUUID, warnings: m.warnings.count, problem: nil,
+                                unclean: m.entries.contains { $0.cleanShutdown == false })
                 if !folder.hasPrefix(".incomplete-"), folder != m.name || m.status != .verified {
                     s.problem = "Its folder and its manifest don't agree."
                     s.status = nil

@@ -1,0 +1,36 @@
+<!-- The Macintosh Backup Utility's icon (2026-10-09): the MacMusic
+     Converter Utility's and the Transfer Utility's (a generic compact
+     computer, its screen showing a 1-bit note, no Apple logo), with a
+     backup badge, a clock with an arrow going back round it, in the
+     MacMusic manual's red (#e0442b).
+     tools/make-icon.sh turns this into Resources/AppIcon.icns. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6efdd"/><stop offset="1" stop-color="#d9ccae"/></linearGradient>
+<linearGradient id="case" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f1e9d4"/><stop offset="1" stop-color="#e2d7bb"/></linearGradient>
+<linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dde3d3"/><stop offset="1" stop-color="#c3cbb9"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.35"/></filter>
+<filter id="badge" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.3"/></filter>
+</defs>
+<rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)" filter="url(#sh)"/>
+<!-- the case, and the recessed band at its foot -->
+<rect x="292" y="196" width="440" height="616" rx="40" fill="url(#case)" stroke="#8c8068" stroke-width="9"/>
+<path d="M297 734 H727" stroke="#a89d83" stroke-width="7"/>
+<rect x="297" y="738" width="430" height="69" rx="0" fill="#d6cbb0" opacity="0.7"/>
+<!-- the bezel and the screen -->
+<rect x="336" y="238" width="352" height="330" rx="26" fill="#e3d9c0" stroke="#9e937a" stroke-width="7"/>
+<rect x="362" y="262" width="300" height="282" rx="18" fill="url(#screen)" stroke="#55503f" stroke-width="7"/>
+<rect x="512" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="529" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="546" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="301" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="529" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="546" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="318" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="335" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="335" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="352" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="352" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="369" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="369" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="386" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="386" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="403" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="403" width="17" height="17" fill="#1b1b1b"/><rect x="444" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="461" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="478" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="495" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="420" width="17" height="17" fill="#1b1b1b"/><rect x="427" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="444" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="461" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="478" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="495" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="546" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="437" width="17" height="17" fill="#1b1b1b"/><rect x="410" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="427" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="444" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="461" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="478" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="495" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="512" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="546" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="597" y="454" width="17" height="17" fill="#1b1b1b"/><rect x="410" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="427" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="444" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="461" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="478" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="495" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="563" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="580" y="471" width="17" height="17" fill="#1b1b1b"/><rect x="427" y="488" width="17" height="17" fill="#1b1b1b"/><rect x="444" y="488" width="17" height="17" fill="#1b1b1b"/><rect x="461" y="488" width="17" height="17" fill="#1b1b1b"/><rect x="478" y="488" width="17" height="17" fill="#1b1b1b"/>
+<!-- the square badge, lower left (where the real one has its logo) -->
+<rect x="352" y="626" width="38" height="38" rx="6" fill="#cfc3a6" stroke="#8c8068" stroke-width="5"/>
+<!-- the floppy slot, right of centre -->
+<rect x="522" y="630" width="150" height="16" rx="8" fill="#55503f"/>
+<rect x="522" y="634" width="150" height="5" rx="2.5" fill="#2e2b22"/>
+<!-- the backup badge, in the manual's red: a clock, an arrow going back round it -->
+<g filter="url(#badge)">
+<circle cx="746" cy="746" r="124" fill="#e0442b" stroke="#ffffff" stroke-width="14"/>
+<path d="M683.6 782 A72 72 0 1 0 683.6 710" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+<polygon points="670.6,732.5 702.2,713.8 671,695.8" fill="#ffffff" stroke="#ffffff" stroke-width="6" stroke-linejoin="round"/>
+<path d="M746 746 V702 M746 746 H782" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+</g>
+</svg>

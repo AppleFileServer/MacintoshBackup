@@ -989,3 +989,79 @@ Built and tested on generated cards only.
   rebuilt catalogue, tried by hand in the scratchpad.
 - An implementation choice: deleting moves a snapshot to the Trash
   rather than erasing it, so a mistake can be undone.
+
+### 20.5 Stage 3 decisions: the window (approved by the owner, 2026-10-09)
+
+- **W1, one window:** the status at the top (state, card, last successful
+  backup, latest result); the source card on the left (name, location,
+  filesystem, capacity and use; after a scan, files, size, BlueSCSI
+  images, configuration and logs, warnings); the history on the right
+  (date and time, name, card, files, size, space taken, status,
+  warnings), the selected snapshot's manifest below it.
+- **W2, the actions:** Back Up Now, Browse Backups, Verify Backup,
+  Restore…, Open Backup Folder, Settings (Command-comma).
+- **W3, the card in Stage 3:** Choose Card… (a folder picker); recognising
+  cards comes in Stage 4. Tested only on generated folders and images.
+- **W4, the reminder** (the owner's revision): the card has to come out of
+  the Plus to be backed up, so there's nothing to ask about its being in
+  use. While waiting for a card, the window reminds: shut the Plus down
+  with Shut Down in the Special menu, and switch it off when it says so,
+  before taking the card out (losing power while the Plus is using the
+  card can damage its disks: the owner has had to restore a backup after
+  just that). The backup sheet shows the scan's summary, the space needed
+  and free, and warnings, with Back Up and Cancel; Back Up is the
+  confirmation. Afterwards: eject the card in the Finder, and put it back
+  before switching the Plus on.
+- **W5, progress:** the stage, files and megabytes done of the totals, the
+  current file, Cancel.
+- **W6, results:** verified, with warnings, inconsistent, failed,
+  cancelled, in plain words with details.
+- **W7, restoring** in a sheet: the whole snapshot or chosen files and
+  folders; the destination; each conflict asked (Skip, Keep Both,
+  Replace, "do the same for the rest"); the result.
+- **W8, verifying** a snapshot, with progress; problems by file and kind.
+- **W9, deleting** from a snapshot's menu: confirmed, with an extra warning
+  for a card's last restore point; to the Trash.
+- **W10, incomplete jobs** apart from the history, with Clear… (confirmed).
+- **W11, Settings:** the backup folder (Choose…, Use Default); thinning
+  (W14) on or off.
+- **W12, the app:** "Macintosh Backup Utility.app", `tools/build-app.sh`,
+  ad-hoc signed; the work off the main thread; quitting mid-job asks;
+  the icon in the family style (made now, the owner's choice).
+- **W13, disks not shut down cleanly:** an HFS volume's header records
+  whether it was put away properly (its "unmounted cleanly" attribute);
+  the scan reads it in each disk image (read-only: the partition map,
+  then two bytes of the volume header) and warns of any image without
+  it, before the backup and in the manifest. The backup still goes ahead.
+- **W14, thinning older snapshots** (the owner's addition, changing the
+  brief's §10 and §17: automatic deletion, on by default): per card,
+  after each verified backup only, of verified snapshots only: the newest
+  of each day for 7 days, of each week (from Monday) to a month, of each
+  month to a year, none older; always at least two (the newest kept to
+  make two); never incomplete jobs, another card's, or a snapshot pinned
+  Keep; where a period has one, the newest cleanly shut down snapshot
+  kept in preference to a newer one that wasn't (W13); removed to the
+  Trash; reported after the backup; a setting to turn it off.
+
+### 20.6 Stage 3: the window (2026-10-09)
+
+Built; the library's parts tested (45 tests), the window to be tried by
+the owner (it isn't seen here: no screenshots).
+
+- W13: the clean-shutdown mark read from images made byte by byte
+  (partitioned as BlueSCSI's, and plain as a floppy's; HFS and HFS Plus;
+  set and clear), from a disk `hformat` made (clean), and from the
+  Transfer Utility's Plus test image (attributes 0x100: clean). A
+  backup of a card with an image whose mark was cleared verifies, with
+  the warning, and the catalogue marks it.
+- W14: over 420 days of daily backups, 7 kept in the last week, one a
+  week to a month, one a month to a year, none older; the newest of a
+  day kept; at least two always; a pinned one kept; the newest always
+  kept, and a clean one preferred to a newer unclean one in the same
+  period; after real backups, the oldest of three the same day thinned,
+  a pinned one kept, an incomplete job untouched.
+- Settings remembered (the backup folder; thinning on by default).
+- The app doesn't make `~/Mac Plus Backups` until the first backup.
+- A test card for the owner: `~/MacPlusProjects/backup-work/Test Card`
+  (the Transfer Utility's image, a copy with its mark cleared as after a
+  power cut, `bluescsi.ini`, a log, a `._` file).
