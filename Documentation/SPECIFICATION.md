@@ -931,3 +931,31 @@ filesystem's serial number, which reformatting changes.
   written out again. No sharing between snapshots; block-level
   deduplication is a candidate for version 2.
 
+### 20.3 Stage 1: the backup engine (2026-10-09)
+
+Built and tested on generated cards only; no real card has been read.
+
+- A test card (three disk images, one in a folder; `bluescsi.ini`, both
+  logs, a firmware package; macOS's `._` file, `.fseventsd` and
+  `.DS_Store`; an empty file, an empty folder, a name with an accent, a
+  tick and brackets) is backed up as a verified snapshot holding every
+  file byte for byte, its manifest equal to the one written; only the
+  snapshot's folder is left in Snapshots.
+- B14: a 64 MB image with 110 KB of data takes under 4 MB in the
+  snapshot, and its SHA-256 matches; in `mbu`'s run, a 67 MB card became
+  a 316 KB snapshot.
+- A file changed on the source after it was copied makes the snapshot
+  *inconsistent*; an unreadable file, *failed*; cancelling, *cancelled*;
+  none is named, and none verifies. A symbolic link is noted and
+  skipped, and the snapshot still verifies.
+- Too little room (an 8 MB disk made with `hdiutil`) is refused before
+  anything is copied.
+- A second backup is a new snapshot, and the first is untouched (its
+  manifest's SHA-256 the same; it still verifies).
+- Verifying later finds a changed byte, a missing file and an
+  unexpected one, and refuses a damaged manifest or one whose totals
+  disagree; a later schema's extra fields are read past. A snapshot
+  verifies with its source deleted.
+- Found and fixed: the manifest's dates must keep milliseconds (written
+  from a whole number, as a formatter can be a millisecond out), and the
+  source's re-check compares against the inventory's own, finer dates.
