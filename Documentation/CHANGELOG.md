@@ -4,6 +4,10 @@
 
 - Stage 6, packaging: `--self-test`; `tools/make-release.sh`; the release
   notes, BUILDING.md and TESTING.md. Version 1.0. 63 tests.
+- From the owner's screenshots: the backup sheet names the registered
+  card; the manifest list shows the card's own files first (macOS's
+  last) with a wider Path column; after a backup, "Click Eject" when the
+  window's Eject button is there.
 
 ## 0.1.0 (in development)
 

@@ -163,7 +163,8 @@ struct StatusView: View {
             if s == .verified {
                 let removed = r.removed.isEmpty ? ""
                     : " Removed \(r.removed.count) older snapshot\(r.removed.count == 1 ? "" : "s"): \(r.removed.joined(separator: ", "))."
-                return "\(r.manifest.name): \(r.manifest.totals.files) files, every one checked.\(removed) Eject the card in the Finder before you put it back in the BlueSCSI, and put it back before you switch the Plus on."
+                let eject = model.canEject ? "Click Eject" : "Eject the card in the Finder"
+                return "\(r.manifest.name): \(r.manifest.totals.files) files, every one checked.\(removed) \(eject) before you put it back in the BlueSCSI, and put it back before you switch the Plus on."
             }
             let bad = r.manifest.entries.filter { $0.result == .failed || $0.result == .changed }
                 .prefix(3).map { "\($0.path): \($0.note ?? $0.result!.rawValue)" }
@@ -329,9 +330,9 @@ struct DetailView: View {
                     }
                 }
                 ForEach(m.warnings, id: \.self) { w in Label(w, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
-                Table(m.entries) {
-                    TableColumn("Path") { e in Text(e.path).lineLimit(1).truncationMode(.middle) }
-                    TableColumn("Kind") { e in Text(e.category.label) }.width(min: 90, ideal: 110)
+                Table(DetailView.ordered(m.entries)) {
+                    TableColumn("Path") { e in Text(e.path).lineLimit(1).truncationMode(.middle) }.width(min: 180, ideal: 300)
+                    TableColumn("Kind") { e in Text(e.category.label) }.width(min: 80, ideal: 90)
                     TableColumn("Size") { e in Text(e.kind == .file ? bytes(e.size) : "") }.width(70)
                     TableColumn("Result") { e in Text(e.result?.rawValue ?? "") }.width(70)
                 }
@@ -341,6 +342,17 @@ struct DetailView: View {
             }
         }
         .padding(10)
+    }
+
+    /// The card's own files first (disk images, configuration, logs, the
+    /// rest), macOS's hidden files last; each group in path order.
+    static func ordered(_ entries: [Entry]) -> [Entry] {
+        let rank: [MacintoshBackupKit.Category: Int] = [.diskImage: 0, .configuration: 1, .log: 2, .firmware: 3,
+                                                       .other: 4, .macOSMetadata: 5]
+        return entries.enumerated().sorted { a, b in
+            let (ra, rb) = (rank[a.element.category] ?? 4, rank[b.element.category] ?? 4)
+            return ra != rb ? ra < rb : a.offset < b.offset
+        }.map(\.element)
     }
 
     func describe(_ k: Verification.Problem.Kind) -> String {

@@ -9,7 +9,7 @@ struct BackupSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Back up \(model.source?.volumeName ?? "the card")?").font(.title3.bold())
+            Text("Back up \(model.cardName)?").font(.title3.bold())
             if let inv = model.inventory {
                 Text("\(inv.files.count) files (\(model.images.count) disk image\(model.images.count == 1 ? "" : "s")), \(bytes(inv.totalBytes)), copied into a new snapshot and every file checked. Nothing is written to the card.")
             }
