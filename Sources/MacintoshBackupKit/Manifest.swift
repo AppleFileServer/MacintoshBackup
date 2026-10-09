@@ -11,6 +11,9 @@ public struct Manifest: Codable, Sendable, Equatable {
         public var volumeUUID: String?
         public var filesystem: String?
         public var capacity: Int64?
+        /// The registered card (C3), if it was registered.
+        public var cardID: UUID?
+        public var cardName: String?
     }
     public struct Totals: Codable, Sendable, Equatable {
         public var files: Int

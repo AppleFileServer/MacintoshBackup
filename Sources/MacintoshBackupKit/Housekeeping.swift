@@ -45,7 +45,9 @@ public extension Repository {
 
     /// The card's verified snapshots other than `name`: none means deleting
     /// it leaves the card with no backup (the window warns).
-    func otherRestorePoints(than name: String, volumeUUID: String?) throws -> [Catalog.Summary] {
-        try Catalog.load(self).restorePoints.filter { $0.folder != name && $0.volumeUUID == volumeUUID }
+    func otherRestorePoints(than name: String, volumeUUID: String?, cardID: UUID? = nil) throws -> [Catalog.Summary] {
+        try Catalog.load(self).restorePoints.filter {
+            $0.folder != name && $0.isOfCard(cardID, volumeUUID: volumeUUID, volumeName: nil)
+        }
     }
 }

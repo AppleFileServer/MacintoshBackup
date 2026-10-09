@@ -26,6 +26,16 @@ struct MainWindowView: View {
             BackupSheet(model: model)
         }
         .sheet(item: $restoring) { s in RestoreSheet(model: model, summary: s) }
+        .sheet(isPresented: Binding(get: { model.registering != nil && model.state != .confirming },
+                                    set: { if !$0 { model.notNow() } })) {
+            RegisterSheet(model: model)
+        }
+        .alert("Is this \(model.asking?.1.name ?? "your card")?", isPresented: Binding(get: { model.asking != nil }, set: { _ in })) {
+            Button("Yes, the Same Card") { model.answerProbable(same: true) }
+            Button("No, a Different Card") { model.answerProbable(same: false) }
+        } message: {
+            Text("It has the same name, size and format as \(model.asking?.1.name ?? "a card you've registered"), but macOS gives it a different identity, as it does a card that's been reformatted. Its backups will be kept together with that card's if it's the same one.")
+        }
         .alert(deleteTitle, isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
             Button("Move to Trash", role: .destructive) { if let s = deleting { model.delete(s) }; deleting = nil }
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -83,6 +93,10 @@ struct StatusView: View {
                     Text(detail).font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
+                if model.canEject {
+                    Button { model.eject() } label: { Label("Eject", systemImage: "eject") }
+                        .help("Eject the card, ready to go back in the BlueSCSI")
+                }
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("Last backup: " + when(model.catalog?.lastBackup?.started)).font(.callout)
                     if let r = model.lastResult { Text("Latest: \(r.manifest.status.rawValue)").font(.caption).foregroundStyle(.secondary) }
@@ -126,19 +140,19 @@ struct StatusView: View {
         switch model.state {
         case .waiting: "Waiting for a card"
         case .scanning: "Looking at \(model.source?.volumeName ?? "the card")…"
-        case .ready, .confirming: "\(name) is ready to back up"
+        case .ready, .confirming: model.volume != nil ? "\(name) is connected" : "\(name) is ready to back up"
         case .backingUp: "Backing up \(name)…"
         case .finished(.verified): model.lastResult?.manifest.warnings.isEmpty == false ? "Backed up and verified, with warnings" : "Backed up and verified"
         case .finished(.inconsistent): "Not verified: the card changed during the backup"
         case .finished(.failed): "The backup failed"
-        case .finished(.cancelled): "The backup was cancelled"
+        case .finished(.cancelled): model.cardRemoved ? "The card was removed during the backup" : "The backup was cancelled"
         case .failed: "The backup couldn't start"
         }
     }
 
     var detail: String {
         switch model.state {
-        case .waiting: return "Insert the BlueSCSI card, then click Choose Card."
+        case .waiting: return "Insert the BlueSCSI card: it's recognised when it appears. (Or click Choose Card.)"
         case .scanning, .backingUp: return "Nothing is written to the card."
         case .ready, .confirming:
             return "\(model.inventory?.files.count ?? 0) files, \(bytes(model.inventory?.totalBytes)). Nothing is copied until you click Back Up Now."
@@ -156,7 +170,7 @@ struct StatusView: View {
         }
     }
 
-    var name: String { model.source?.volumeName ?? model.source?.url.lastPathComponent ?? "The card" }
+    var name: String { model.cardName }
 
     func progressText(_ p: BackupProgress) -> String {
         switch p.stage {
@@ -177,10 +191,19 @@ struct SourceView: View {
         Form {
             Section("Card") {
                 if let s = model.source {
+                    if let c = model.card { LabeledContent("Registered as", value: c.name) }
+                    else if model.volume != nil {
+                        LabeledContent("Registered as") {
+                            Button("Register…") { model.registering = model.volume }
+                        }
+                    }
                     LabeledContent("Name", value: s.volumeName ?? s.url.lastPathComponent)
                     LabeledContent("Location") { Text(s.url.path).lineLimit(1).truncationMode(.middle) }
                     LabeledContent("Format", value: s.filesystem ?? "—")
                     LabeledContent("Used", value: "\(bytes(s.used)) of \(bytes(s.capacity))")
+                    if let e = model.evidence {
+                        LabeledContent("BlueSCSI", value: e == .strong ? "its configuration or log is here" : e == .likely ? "its disk images are here" : "no sign of it")
+                    }
                 } else {
                     Text("No card chosen.").foregroundStyle(.secondary)
                 }
@@ -241,7 +264,7 @@ struct HistoryView: View {
                             Text(when(s.started))
                         }
                     }.width(min: 140, ideal: 160)
-                    TableColumn("Card") { s in Text(s.volumeName ?? "—") }.width(min: 80, ideal: 110)
+                    TableColumn("Card") { s in Text(model.cardName(of: s)) }.width(min: 80, ideal: 110)
                     TableColumn("Files") { s in Text("\(s.files)") }.width(50)
                     TableColumn("Size") { s in Text(bytes(s.bytes)) }.width(min: 60, ideal: 70)
                     TableColumn("On disk") { s in Text(bytes(s.storedBytes)) }.width(min: 60, ideal: 70)

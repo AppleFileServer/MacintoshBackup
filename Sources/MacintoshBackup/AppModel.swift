@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+@preconcurrency import UserNotifications
 import MacintoshBackupKit
 
 /// The window's state and its jobs (W1-W14). The work (scanning,
@@ -46,11 +47,131 @@ final class AppModel {
 
     var running: Bool { state == .backingUp || verifying }
 
-    init() { reload() }
+    // Cards (Stage 4; C1-C6).
+    var register = CardRegister()
+    var card: Card?                           // the registered card being shown
+    var volume: VolumeInfo?                   // the disk it's on, if offered
+    var evidence: Evidence?
+    /// A new card to register (the sheet), or a probable match to ask about.
+    var registering: VolumeInfo?
+    var asking: (VolumeInfo, Card)?
+    var cardRemoved = false
+    private var watcher = CardWatcher()
+    private var monitor: VolumeMonitor?
+    private var notified = false
+
+    init() {
+        reload()
+        monitor = VolumeMonitor(mounted: { [weak self] in self?.mounted($0) },
+                                unmounted: { [weak self] in self?.unmounted($0) })
+    }
+
+    // MARK: Cards appearing and going (C1-C5)
+
+    func mounted(_ url: URL) {
+        Task {
+            let found = await Task.detached { () -> (VolumeInfo, Evidence) in
+                let v = VolumeInfo.of(url)
+                return (v, v.isCandidate ? Evidence.of(url) : .none)
+            }.value
+            guard case .offer(let v, let e, let match) = watcher.mounted(found.0, evidence: found.1, register: register)
+            else { return }
+            offer(v, evidence: e, match: match)
+        }
+    }
+
+    func unmounted(_ url: URL) {
+        _ = watcher.unmounted(url)
+        guard source?.url.standardizedFileURL == url.standardizedFileURL else { return }
+        if state == .backingUp {
+            cardRemoved = true
+            cancel()
+        } else if !running {
+            forgetCard()
+        }
+    }
+
+    /// A card is here (C4): shown, scanned (reading only), and the owner
+    /// asked to register it if it's new; never backed up by itself.
+    func offer(_ v: VolumeInfo, evidence e: Evidence, match: CardRegister.Match) {
+        guard !running, state != .confirming else { return }
+        volume = v
+        evidence = e
+        switch match {
+        case .known(let c):
+            card = c
+            register.seen(c)
+            try? register.save(repository)
+        case .probably(let c):
+            card = nil
+            asking = (v, c)
+        case .new:
+            card = nil
+            registering = v
+        }
+        setSource(v.url)
+        notifyIfInBackground()
+    }
+
+    func registerCard(_ name: String) {
+        guard let v = registering else { return }
+        card = register.register(v, name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "Mac Plus BlueSCSI" : name)
+        try? register.save(repository)
+        registering = nil
+    }
+
+    func notNow() { registering = nil }
+
+    func answerProbable(same: Bool) {
+        guard let (v, c) = asking else { return }
+        asking = nil
+        if same {
+            card = register.confirm(c, is: v)
+            try? register.save(repository)
+        } else {
+            registering = v
+        }
+    }
+
+    /// A snapshot's card, by name: its own record, or the registered card
+    /// with its volume's UUID (a snapshot made before registering).
+    func cardName(of s: Catalog.Summary) -> String {
+        s.cardName ?? register.cards.first { $0.volumeUUID != nil && $0.volumeUUID == s.volumeUUID }?.name
+            ?? s.volumeName ?? "—"
+    }
+
+    var cardName: String { card?.name ?? source?.volumeName ?? source?.url.lastPathComponent ?? "The card" }
+
+    /// One notification if the app is in the background (C4).
+    func notifyIfInBackground() {
+        guard !NSApp.isActive else { return }
+        let centre = UNUserNotificationCenter.current()
+        let name = cardName
+        centre.requestAuthorization(options: [.alert]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "\(name) is connected"
+            content.body = "Open the Macintosh Backup Utility to back it up."
+            centre.add(UNNotificationRequest(identifier: "card-\(UUID().uuidString)", content: content, trigger: nil))
+        }
+    }
+
+    /// Ejects the card properly (C5); not while a job is running.
+    func eject() {
+        guard !running, let url = source?.url else { return }
+        do {
+            try NSWorkspace.shared.unmountAndEjectDevice(at: url)
+        } catch {
+            show("The card couldn't be ejected", error.localizedDescription + " Close anything using it, and try again, or eject it in the Finder.")
+        }
+    }
+
+    var canEject: Bool { !running && volume != nil && source?.url == volume?.url }
 
     // MARK: The history
 
     func reload() {
+        register = CardRegister.load(repository)
         // No backup folder yet: an empty history (it's made by the first backup).
         guard FileManager.default.fileExists(atPath: repository.root.path) else {
             catalog = Catalog(updated: Date(), snapshots: [])
@@ -104,6 +225,8 @@ final class AppModel {
         inventory = nil
         scanProblem = nil
         lastResult = nil
+        cardRemoved = false
+        if volume?.url != url { volume = nil; card = nil; evidence = nil }
         state = .scanning
         Task {
             let result = await Task.detached { () -> Result<Inventory, Error> in
@@ -120,6 +243,7 @@ final class AppModel {
     func forgetCard() {
         guard !running else { return }
         source = nil; inventory = nil; scanProblem = nil; state = .waiting
+        volume = nil; card = nil; evidence = nil; registering = nil; asking = nil
     }
 
     // What the scan found (W1, W13).
@@ -160,6 +284,7 @@ final class AppModel {
         lastResult = nil
         var writer = SnapshotWriter(repository: repository)
         writer.thinning = prefs.thinning
+        writer.card = card
         let url = source.url
         let report: @Sendable (BackupProgress) -> Void = { [weak self] p in
             Task { @MainActor in if self?.state == .backingUp { self?.progress = p } }
@@ -177,6 +302,7 @@ final class AppModel {
                 state = .finished(r.manifest.status)
                 reload()
                 if r.verified { select(r.folder.lastPathComponent) }
+                if cardRemoved { self.source = nil; inventory = nil; volume = nil }
             case .failure(let e):
                 state = .failed((e as? BackupError)?.message ?? e.localizedDescription)
                 reload()
@@ -221,7 +347,7 @@ final class AppModel {
 
     /// The card's last restore point? (W9's extra warning.)
     func isLast(_ s: Catalog.Summary) -> Bool {
-        ((try? repository.otherRestorePoints(than: s.folder, volumeUUID: s.volumeUUID)) ?? []).isEmpty
+        ((try? repository.otherRestorePoints(than: s.folder, volumeUUID: s.volumeUUID, cardID: s.cardID)) ?? []).isEmpty
     }
 
     func delete(_ s: Catalog.Summary) {

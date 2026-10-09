@@ -1065,3 +1065,57 @@ the owner (it isn't seen here: no screenshots).
 - A test card for the owner: `~/MacPlusProjects/backup-work/Test Card`
   (the Transfer Utility's image, a copy with its mark cleared as after a
   power cut, `bluescsi.ini`, a log, a `._` file).
+
+### 20.7 Stage 4 decisions and findings: recognising the card (2026-10-09)
+
+Decisions C1-C8 (approved by the owner): C1 watching (mount, unmount,
+rename notifications; the disks at launch; only external, removable or
+ejectable ones); C2 evidence, read only (strong: `bluescsi.ini`, or a
+log naming BlueSCSI; likely: image names; else ignored); C3 the card
+register (`Catalog/cards.json`; the same UUID is the card; the same
+name, size and format with another UUID: ask; snapshots record the
+card's ID; thinning by card); C4 one offer per insertion, in the window,
+and one notification in the background; C5 the card removed mid-job
+(the job isn't a restore point), Eject afterwards; C6 a plain message if
+macOS hasn't allowed access; C7 the tests; C8 the first reading of the
+owner's real card, by the owner, step by step (reading only).
+
+Found, on folders and disk images only:
+- Evidence: strong from `bluescsi.ini`, or a `log.txt`/`lastlog.txt`
+  naming BlueSCSI; likely from image names; none for a camera's card, a
+  log that isn't BlueSCSI's, or only `._` files.
+- The register: a known card; a reformatted one (a new UUID, the same
+  name, size and format) asked about, and confirmed; a different card
+  new; renamed; saved and read back (its dates to the millisecond, as
+  the manifest's).
+- The watcher: the Mac's own disks and disks with no sign of BlueSCSI
+  ignored; one offer however many notifications; gone, and back, offered
+  again as the registered card.
+- Thinning per card: two cards' snapshots thinned apart, each keeping two.
+- Real mounts: exFAT and FAT32 disk images (made with `hdiutil`) are
+  candidates (external, ejectable), with a UUID and a format; evidence
+  none until `bluescsi.ini` is written to them, then strong.
+- A note for testing: on this Mac, `hdiutil create` works from the test
+  runner but is refused ("Operation not permitted") from the shell, so
+  test images are made only inside the tests.
+- The owner's real card: not yet read (C8).
+
+**The owner's real card (C8; 2026-10-09):** done by the owner, step by
+step, and "it works": recognised, registered as "Mac Plus BlueSCSI",
+backed up, verified, ejected, recognised again, restored to folders,
+and returned to the Plus. From the snapshots' manifests (read here, not
+the card): a 15.5 GB FAT32 card, BLUESCSI, in a reader reporting
+"STORAGE DEVICE"; six disk images (System 20 MB, Work 30 MB,
+Applications 40 MB, Utilities 20 MB, Scratch 1980 MB, Transfer), with
+`bluescsi.ini` and `log.txt`: 13 files, 2.26 GB, all verified.
+- W13: every image was marked as cleanly put away, after a proper Shut
+  Down: the check reads real Plus disks. That System 6 *clears* the mark
+  while a disk is in use stays PROVISIONAL (it would take a power cut to
+  see).
+- B14: each snapshot takes 2.1 GB, near its full size: the images' free
+  space isn't zeros (old data), so leaving zeros out saves little here.
+- Found and fixed: a snapshot made before the card was registered (the
+  owner's first, from Stage 3) carried no card ID, so thinning and the
+  last-backup warning would have counted it as another card's; a
+  snapshot without a card ID now counts as the registered card's when
+  its volume's UUID matches, and the history shows the card's name.

@@ -40,6 +40,8 @@ public struct SnapshotWriter: Sendable {
     public var thinning = false
     /// How thinned snapshots are removed (the Trash; the tests, elsewhere).
     public var remover: Repository.Remover = Repository.toTrash
+    /// The registered card being backed up (C3), recorded in the manifest.
+    public var card: Card?
 
     public init(repository: Repository) { self.repository = repository }
 
@@ -86,8 +88,8 @@ public struct SnapshotWriter: Sendable {
             _ = try? Catalog.rebuild(repository)
             var removed: [String] = []
             if thinning {
-                removed = (try? repository.thin(card: m.source.volumeUUID, volumeName: m.source.volumeName,
-                                                remover: remover)) ?? []
+                removed = (try? repository.thin(cardID: m.source.cardID, volumeUUID: m.source.volumeUUID,
+                                                volumeName: m.source.volumeName, remover: remover)) ?? []
             }
             return BackupResult(manifest: m, folder: final, removed: removed)
         }
@@ -190,7 +192,8 @@ public struct SnapshotWriter: Sendable {
                         app: .init(name: AppVersion.name, version: AppVersion.string),
                         source: .init(path: source.path, volumeName: v?.volumeName, volumeUUID: v?.volumeUUIDString,
                                       filesystem: v?.volumeLocalizedFormatDescription,
-                                      capacity: v?.volumeTotalCapacity.map(Int64.init)),
+                                      capacity: v?.volumeTotalCapacity.map(Int64.init),
+                                      cardID: card?.id, cardName: card?.name),
                         totals: .init(files: files.count, folders: entries.filter { $0.kind == .folder }.count,
                                       bytes: files.reduce(0) { $0 + $1.size }),
                         entries: entries, warnings: warnings)

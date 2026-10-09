@@ -44,6 +44,14 @@ public struct Inventory: Sendable {
 
     public static func scan(_ root: URL) throws -> Inventory {
         let root = root.standardizedFileURL.resolvingSymlinksInPath()
+        // The top level first: if macOS hasn't allowed reading the card
+        // (C6), say so, rather than finding nothing there.
+        do { _ = try FileManager.default.contentsOfDirectory(atPath: root.path) } catch let e as CocoaError
+            where e.code == .fileReadNoPermission {
+            throw BackupError.notAllowed(root.path)
+        } catch {
+            throw BackupError.sourceUnreadable(root.path)
+        }
         guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: keys,
                                                           options: [], errorHandler: { _, _ in true }) else {
             throw BackupError.sourceUnreadable(root.path)

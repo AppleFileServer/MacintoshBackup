@@ -76,13 +76,11 @@ public extension Repository {
 
     /// Thins one card's snapshots by the rule (W14); the names removed.
     @discardableResult
-    func thin(card volumeUUID: String?, volumeName: String?, now: Date = Date(),
+    func thin(cardID: UUID? = nil, volumeUUID: String?, volumeName: String?, now: Date = Date(),
               remover: Remover = Repository.toTrash) throws -> [String] {
         let catalog = try Catalog.load(self)
         let pinned = pins()
-        let mine = catalog.restorePoints.filter { s in
-            volumeUUID != nil ? s.volumeUUID == volumeUUID : s.volumeName == volumeName
-        }
+        let mine = catalog.restorePoints.filter { $0.isOfCard(cardID, volumeUUID: volumeUUID, volumeName: volumeName) }
         let candidates = mine.compactMap { s -> Retention.Candidate? in
             guard let id = s.snapshotID, let started = s.started else { return nil }
             return Retention.Candidate(id: id, started: started, pinned: pinned.contains(id), clean: !s.unclean)

@@ -2,6 +2,18 @@
 
 ## 0.1.0 (in development)
 
+- Stage 4, recognising the card (C1-C8): disks appearing and going
+  (macOS's notifications, and those already there at launch), only
+  external removable or ejectable ones; a BlueSCSI card told by its
+  `bluescsi.ini`, its log's own text, or its image names, read only;
+  the card register (`Catalog/cards.json`): register a card under a
+  name, know it again by its volume UUID, ask when only its name, size
+  and format match (a reformatted card); one offer per insertion, never
+  a backup by itself; a notification when the app is in the background;
+  the card removed mid-backup; Eject; a plain message if macOS hasn't
+  allowed access. Each snapshot records its card, and thinning keeps
+  cards apart. 50 tests, on folders and exFAT and FAT32 disk images.
+
 - Stage 3, the window (W1-W14): the status (with the shut-down reminder
   while waiting for a card), the card and its contents, the history and
   the selected snapshot's manifest; Back Up Now (with its sheet: the

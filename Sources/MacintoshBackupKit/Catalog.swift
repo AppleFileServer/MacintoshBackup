@@ -22,10 +22,22 @@ public struct Catalog: Codable, Sendable, Equatable {
         public var storedBytes: Int64
         public var volumeName: String?
         public var volumeUUID: String?
+        public var cardID: UUID?
+        public var cardName: String?
         public var warnings: Int
         public var problem: String?
         /// A disk image in it wasn't shut down cleanly (W13).
         public var unclean = false
+
+        /// One card's snapshot (C3): by the card's register ID; a snapshot
+        /// made before the card was registered (no ID) counts as the card's
+        /// if its volume's UUID is the card's.
+        public func isOfCard(_ id: UUID?, volumeUUID uuid: String?, volumeName name: String?) -> Bool {
+            if let id, cardID == id { return true }
+            guard cardID == nil else { return false }
+            if let uuid { return volumeUUID == uuid }
+            return id == nil && volumeName == name
+        }
 
         /// A complete restore point: named, and verified when made.
         public var isRestorePoint: Bool { status == .verified && !folder.hasPrefix(".incomplete-") }
@@ -71,7 +83,8 @@ public struct Catalog: Codable, Sendable, Equatable {
                 var s = Summary(snapshotID: m.snapshotID, name: m.name, folder: folder, status: m.status,
                                 started: m.started, finished: m.finished, files: m.totals.files,
                                 bytes: m.totals.bytes, storedBytes: stored, volumeName: m.source.volumeName,
-                                volumeUUID: m.source.volumeUUID, warnings: m.warnings.count, problem: nil,
+                                volumeUUID: m.source.volumeUUID, cardID: m.source.cardID,
+                                cardName: m.source.cardName, warnings: m.warnings.count, problem: nil,
                                 unclean: m.entries.contains { $0.cleanShutdown == false })
                 if !folder.hasPrefix(".incomplete-"), folder != m.name || m.status != .verified {
                     s.problem = "Its folder and its manifest don't agree."
@@ -81,7 +94,7 @@ public struct Catalog: Codable, Sendable, Equatable {
             } catch let e as BackupError {
                 list.append(Summary(snapshotID: nil, name: folder, folder: folder, status: nil, started: nil,
                                     finished: nil, files: 0, bytes: 0, storedBytes: stored, volumeName: nil,
-                                    volumeUUID: nil, warnings: 0, problem: e.message))
+                                    volumeUUID: nil, cardID: nil, cardName: nil, warnings: 0, problem: e.message))
             }
         }
         list.sort { ($0.started ?? .distantPast, $0.folder) < ($1.started ?? .distantPast, $1.folder) }

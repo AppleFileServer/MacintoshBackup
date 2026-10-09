@@ -208,3 +208,25 @@ struct SettingsView: View {
         .padding(.vertical, 8)
     }
 }
+
+/// Registering a new card (C3): a friendly name for it.
+struct RegisterSheet: View {
+    @Bindable var model: AppModel
+    @State private var name = "Mac Plus BlueSCSI"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Register this card?").font(.title3.bold())
+            Text("\(model.registering?.name ?? "This card") looks like a BlueSCSI card. Give it a name, and its backups are kept together under it, and it's recognised whenever it's inserted.")
+            TextField("Name", text: $name).textFieldStyle(.roundedBorder)
+            Text("Nothing is written to the card: the register is kept in the backup folder.").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("Not Now") { model.notNow() }.keyboardShortcut(.cancelAction)
+                Button("Register") { model.registerCard(name) }.keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 440)
+    }
+}
