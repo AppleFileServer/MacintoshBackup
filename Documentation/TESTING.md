@@ -36,3 +36,13 @@ copy outside the repository.
   every image marked as cleanly put away (SPECIFICATION.md §20.7).
 - **Restore to a New Card on a spare card:** to do (the steps:
   SPECIFICATION.md §20.8).
+
+## Jobs for later
+
+- **Waiting for a spare SD card** (logged 2026-10-10: the owner hasn't
+  one to hand): test Restore to a New Card on it (SPECIFICATION.md
+  §20.8). Then: record the result in the release notes' "Checked", tag
+  `v1.0`, run `tools/make-release.sh --bundle`, and add the utility to
+  MacMusic's environment archive. Until then, the 1.0 candidate
+  (`~/MacPlusProjects/releases/Macintosh-Backup-Utility-1.0`, from
+  c18515c) stands, with Restore to a New Card verified on disk images.
